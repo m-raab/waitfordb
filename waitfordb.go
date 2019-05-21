@@ -37,30 +37,30 @@ func (dbconf *DBConfig) ParseCommandLine() {
 	dbconf.name = *paramNamePtr
 
 	if *paramHostPtr == "" {
-		fmt.Fprintln(os.Stderr, "Parameter 'host' is empty. \n")
+		fmt.Fprintln(os.Stderr, "Parameter 'host' is empty.")
 		flag.CommandLine.Usage()
 		os.Exit(101)
 	}
 	if *paramPortPtr == 0 {
-		fmt.Fprintln(os.Stderr, "Parameter 'port' is empty. \n")
+		fmt.Fprintln(os.Stderr, "Parameter 'port' is empty.")
 		flag.CommandLine.Usage()
 		os.Exit(102)
 	}
 	if *paramUserPtr == "" {
-		fmt.Fprintln(os.Stderr, "Parameter 'user' is empty. \n")
+		fmt.Fprintln(os.Stderr, "Parameter 'user' is empty.")
 		flag.CommandLine.Usage()
 		os.Exit(103)
 	}
 	if *paramPasswordPtr == "" {
 		dbconf.password = os.Getenv("DB_USER_PASSWORD")
 		if dbconf.password == "" {
-			fmt.Fprintln(os.Stderr, "Parameter user 'password' is empty. You can set also the environment 'DB_USER_PASSWORD' \n")
+			fmt.Fprintln(os.Stderr, "Parameter user 'password' is empty. You can set also the environment 'DB_USER_PASSWORD'")
 			flag.CommandLine.Usage()
 			os.Exit(104)
 		}
 	}
 	if *paramNamePtr == "" {
-		fmt.Fprintln(os.Stderr, "Parameter database 'name' is empty. \n")
+		fmt.Fprintln(os.Stderr, "Parameter database 'name' is empty.")
 		flag.CommandLine.Usage()
 		os.Exit(105)
 	}

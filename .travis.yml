@@ -5,7 +5,6 @@ install:
   - curl https://raw.githubusercontent.com/golang/dep/master/install.sh | sh
 script:
   - dep ensure -v
-  - go test -v
 cache:
   directories:
     - $GOPATH/pkg/dep # cache dep downloaded dependencies
