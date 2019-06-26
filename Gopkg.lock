@@ -11,6 +11,14 @@
 
 [[projects]]
   branch = "master"
+  digest = "1:2a25619134eaaa4801f9d97aa3c834b801b381a1b0f639bc1b3ffaee87eec0a1"
+  name = "github.com/Flaque/filet"
+  packages = ["."]
+  pruneopts = "UT"
+  revision = "fc4d33cfcf9345df1ea909df1e42073c87735b1e"
+
+[[projects]]
+  branch = "master"
   digest = "1:c9dd44a96bdb9689436c2a1adbbcaba649ff4d51711e1aeab408f4e177dce8a5"
   name = "github.com/denisenkom/go-mssqldb"
   packages = [
@@ -21,6 +29,17 @@
   revision = "731ef375ac027e24d275c5432221dbec5007a647"
 
 [[projects]]
+  digest = "1:bb495ec276ab82d3dd08504bbc0594a65de8c3b22c6f2aaa92d05b73fbf3a82e"
+  name = "github.com/spf13/afero"
+  packages = [
+    ".",
+    "mem",
+  ]
+  pruneopts = "UT"
+  revision = "588a75ec4f32903aa5e39a2619ba6a4631e28424"
+  version = "v1.2.2"
+
+[[projects]]
   branch = "master"
   digest = "1:100a36e16f77aaad7c9144ab26bcefb92c5b6ebed5b137f935fdc11f541fa5b8"
   name = "golang.org/x/crypto"
@@ -28,9 +47,27 @@
   pruneopts = "UT"
   revision = "a29dc8fdc73485234dbef99ebedb95d2eced08de"
 
+[[projects]]
+  digest = "1:1093f2eb4b344996604f7d8b29a16c5b22ab9e1b25652140d3fede39f640d5cd"
+  name = "golang.org/x/text"
+  packages = [
+    "internal/gen",
+    "internal/triegen",
+    "internal/ucd",
+    "transform",
+    "unicode/cldr",
+    "unicode/norm",
+  ]
+  pruneopts = "UT"
+  revision = "342b2e1fbaa52c93f31447ad2c6abc048c63e475"
+  version = "v0.3.2"
+
 [solve-meta]
   analyzer-name = "dep"
   analyzer-version = 1
-  input-imports = ["github.com/denisenkom/go-mssqldb"]
+  input-imports = [
+    "github.com/Flaque/filet",
+    "github.com/denisenkom/go-mssqldb",
+  ]
   solver-name = "gps-cdcl"
   solver-version = 1

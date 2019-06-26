@@ -1,3 +1,19 @@
+/*
+ * Copyright (c) 2019.
+ *
+ * Licensed under the Apache License, Version 2.0 (the "License");
+ * you may not use this file except in compliance with the License.
+ * You may obtain a copy of the License at
+ *
+ * http://www.apache.org/licenses/LICENSE-2.0
+ *
+ * Unless required by applicable law or agreed to in writing, software
+ * distributed under the License is distributed on an "AS IS" BASIS,
+ * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+ * See the License for the specific language governing permissions and
+ * limitations under the License.
+ */
+
 package main
 
 import (
@@ -7,26 +23,35 @@ import (
 	"fmt"
 	_ "github.com/denisenkom/go-mssqldb"
 	"log"
+	"math/rand"
 	"os"
 	"time"
 )
 
 var db *sql.DB
 
-type DBConfig struct {
+type Config struct {
 	host     string
 	port     int
 	user     string
 	password string
 	name     string
+	lockfile string
+
+	timeout    int
+	timeperiod int
 }
 
-func (dbconf *DBConfig) ParseCommandLine() {
+func (dbconf *Config) ParseCommandLine() {
 	paramHostPtr := flag.String("host", "localhost", "Host name of the server with a MS SQLServer")
 	paramPortPtr := flag.Int("port", 1433, "MSSQLServer is listing on this port")
 	paramUserPtr := flag.String("user", "", "Database user name")
 	paramPasswordPtr := flag.String("password", "", "Passwort of database user")
 	paramNamePtr := flag.String("name", "", "Database name")
+	paramLockFilePtr := flag.String("lockfile", "", "Create a lock file")
+
+	paramTimeout := flag.Int("timeout", 200, "Timeout for waiting in seconds")
+	paramTimeperiod := flag.Int("timeperiod", 20, "Time between checks in seconds")
 
 	flag.Parse()
 
@@ -35,6 +60,11 @@ func (dbconf *DBConfig) ParseCommandLine() {
 	dbconf.user = *paramUserPtr
 	dbconf.password = *paramPasswordPtr
 	dbconf.name = *paramNamePtr
+	//locking table
+	dbconf.lockfile = *paramLockFilePtr
+	//time configuration
+	dbconf.timeout = *paramTimeout
+	dbconf.timeperiod = *paramTimeperiod
 
 	if *paramHostPtr == "" {
 		fmt.Fprintln(os.Stderr, "Parameter 'host' is empty.")
@@ -64,52 +94,71 @@ func (dbconf *DBConfig) ParseCommandLine() {
 		flag.CommandLine.Usage()
 		os.Exit(105)
 	}
+	if *paramTimeout <= *paramTimeperiod {
+		fmt.Fprintln(os.Stderr, "Parameter timeperiod is bigger or equal to timeout. The timeout configuration must be bigger than the timeperiod.")
+		flag.CommandLine.Usage()
+		os.Exit(106)
+	}
+	if *paramTimeout <= 0 {
+		fmt.Fprintln(os.Stderr, "Parameter timeout must be bigger than 0.")
+		flag.CommandLine.Usage()
+		os.Exit(107)
+	}
+	if *paramTimeperiod <= 0 {
+		fmt.Fprintln(os.Stderr, "Parameter timeperiod must be bigger than 0.")
+		flag.CommandLine.Usage()
+		os.Exit(108)
+	}
 }
 
 func main() {
 
-	dbconf := &DBConfig{}
+	dbconf := &Config{}
 	dbconf.ParseCommandLine()
 
 	// Build connection string
 	connString := fmt.Sprintf("host=%s;user id=%s;password=%s;port=%d;database=%s;",
 		dbconf.host, dbconf.user, dbconf.password, dbconf.port, dbconf.name)
 
-	var tries = 0
-	var triesConf = 10
+	runTime := 0
+	available := false
 
-	for tries < triesConf {
+	for runTime < dbconf.timeout {
 		var err error
 
-		// Create connection pool
-		db, err = sql.Open("sqlserver", connString)
-		if err != nil {
-			log.Fatalf("Error creating connection pool: ", err.Error())
+		// check of lock file
+		if dbconf.lockfile != "" {
+			available = !dbconf.LockFileExists()
 		}
 
-		ctx := context.Background()
-		err = db.PingContext(ctx)
+		// check database
+		if (dbconf.lockfile != "" && available) || dbconf.lockfile == "" {
+			// Create connection pool
+			db, err = sql.Open("sqlserver", connString)
+			if err != nil {
+				log.Fatalf("Error creating connection pool: %s", err.Error())
+			}
 
-		if err == nil {
-			fmt.Printf("Connected!\n")
-			count, err := GetTablesCount()
+			ctx := context.Background()
+			err = db.PingContext(ctx)
+
 			if err == nil {
-				DBFound(count)
+				fmt.Printf("Connected!\n")
+				count, err := GetTablesCount()
+				if err == nil {
+					DBFound(count)
+				}
 			}
 		}
 
-		switch {
-		case tries == 0:
-			log.Printf("Wait for Database '%s'.", dbconf.host)
-		case tries < triesConf:
-			log.Printf("Wait %d seconds for Database '%s'. Will give up in %d seconds.", tries*20, dbconf.name, (triesConf-tries)*20)
-		}
+		log.Printf("Wait %d seconds for Database '%s'. Will give up in %d seconds.", runTime, dbconf.name, (dbconf.timeout - runTime))
 
-		tries += 1
-		time.Sleep(20 * time.Second)
+		runTime += dbconf.timeperiod
+		time.Sleep(time.Duration(rand.Int31n(int32(dbconf.timeperiod))) * time.Second)
 	}
+
 	log.Fatalf("No database '%s' found in %d seconds. Please check your configuration [host: %s, database: %s, port: %d, user: %s]",
-		dbconf.name, triesConf*20, dbconf.host, dbconf.name, dbconf.port, dbconf.user)
+		dbconf.name, runTime, dbconf.host, dbconf.name, dbconf.port, dbconf.user)
 	os.Exit(10)
 }
 
@@ -120,6 +169,15 @@ func DBFound(tableCount int) {
 		os.Exit(1)
 	}
 	os.Exit(0)
+}
+
+func (dbconf *Config) LockFileExists() bool {
+	if _, err := os.Stat(dbconf.lockfile); err != nil {
+		if os.IsNotExist(err) {
+			return false
+		}
+	}
+	return true
 }
 
 func GetTablesCount() (int, error) {

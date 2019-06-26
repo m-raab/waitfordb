@@ -1,0 +1,28 @@
+version: "3.4"
+services:
+  mssql-server:
+    # build: .
+    image: "docker-internal.rnd.intershop.de/intershop/mssql-server:latest"
+
+    ports:
+      - "1433:1433"
+
+    volumes:
+      - type: volume
+        source: mssqlserver
+        target: /var/opt/mssql
+        volume:
+          nocopy: true
+
+    environment:
+      ACCEPT_EULA:  Y
+      SA_PASSWORD:  1nstershop5A
+      MSSQL_PID:    Developer
+      RECREATEDB:   "false"
+      RECREATEUSER: "false"
+      ICM_DB_NAME:  icmdb
+      ICM_DB_USER:  intershop
+      ICM_DB_PASSWORD: intershop
+
+volumes:
+  mssqlserver:
