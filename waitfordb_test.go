@@ -19,10 +19,10 @@ package main
 import (
 	"github.com/Flaque/filet"
 	_ "github.com/Flaque/filet"
-	"os"
 	"testing"
 )
 
+/*
 func TestParseCommandLineDatabase(t *testing.T) {
 	os.Args = []string{"command", "--host=hostname", "--port=1234", "--user=username", "--password=passwd", "--dbname=icmdb"}
 
@@ -34,7 +34,7 @@ func TestParseCommandLineDatabase(t *testing.T) {
 	}
 }
 
-/*
+
 func TestParseCommandLineLockFile(t *testing.T) {
 	os.Args = []string{"command", "--host=hostname", "--port=1234", "--user=username", "--password=passwd", "--dbname=icmdb", "--lockfile=test"}
 
@@ -58,5 +58,25 @@ func TestFileExist(t *testing.T) {
 
 	if !md.LockFileExists() {
 		t.Errorf("Lockfile is there but not correct identified. File is %s", file.Name())
+	}
+}
+
+func TestOracleParameter(t *testing.T) {
+	dbcon := &DBConnection{}
+
+	dbcon.SetDBParamsFromJDBC("jdbc:oracle:thin:@hostname:1521:sid")
+
+	if dbcon.name != "sid" || dbcon.port != 1521 || dbcon.host != "hostname" {
+		t.Errorf("DB is not correct identified!")
+	}
+}
+
+func TestMSSQLParameter(t *testing.T) {
+	dbcon := &DBConnection{}
+
+	dbcon.SetDBParamsFromJDBC("jdbc:sqlserver://icm-mssql-server:1433;databaseName=icmdb")
+
+	if dbcon.name != "icmdb" || dbcon.port != 1433 || dbcon.host != "icm-mssql-server" {
+		t.Errorf("DB is not correct identified! %s, %d, %s", dbcon.name, dbcon.port, dbcon.host)
 	}
 }

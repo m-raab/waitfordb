@@ -22,32 +22,40 @@ import (
 	"flag"
 	"fmt"
 	_ "github.com/denisenkom/go-mssqldb"
+	"github.com/pkg/errors"
+	_ "gopkg.in/goracle.v2"
 	"log"
 	"math/rand"
 	"os"
+	"strconv"
+	"strings"
 	"time"
 )
 
 var db *sql.DB
 
 type Config struct {
-	host     string
-	port     int
+	jdbcurl  string
 	user     string
 	password string
-	dbname   string
 	lockfile string
 
 	timeout    int
 	timeperiod int
 }
 
+type DBConnection struct {
+	host string
+	port int
+	name string
+
+	dbtype string
+}
+
 func (config *Config) ParseCommandLine() {
-	paramHostPtr := flag.String("host", "localhost", "Host name of the server with a MS SQLServer")
-	paramPortPtr := flag.Int("port", 1433, "MSSQLServer is listing on this port")
+	paramJdbcUrl := flag.String("jdbcurl", "", "JDBC connection URL ")
 	paramUserPtr := flag.String("user", "", "Database user name")
 	paramPasswordPtr := flag.String("password", "", "Passwort of database user")
-	paramNamePtr := flag.String("dbname", "", "Database name")
 	paramLockFilePtr := flag.String("lockfile", "", "Create a lock file")
 
 	paramTimeout := flag.Int("timeout", 200, "Timeout for waiting in seconds")
@@ -55,26 +63,19 @@ func (config *Config) ParseCommandLine() {
 
 	flag.Parse()
 
-	config.host = *paramHostPtr
-	config.port = *paramPortPtr
+	config.jdbcurl = *paramJdbcUrl
 	config.user = *paramUserPtr
 	config.password = *paramPasswordPtr
-	config.dbname = *paramNamePtr
 	//locking table
 	config.lockfile = *paramLockFilePtr
 	//time configuration
 	config.timeout = *paramTimeout
 	config.timeperiod = *paramTimeperiod
 
-	if *paramHostPtr == "" {
-		fmt.Fprintln(os.Stderr, "Parameter 'host' is empty.")
+	if *paramJdbcUrl == "" {
+		fmt.Fprintln(os.Stderr, "Parameter 'jdbcurl' is empty.")
 		flag.CommandLine.Usage()
 		os.Exit(101)
-	}
-	if *paramPortPtr == 0 {
-		fmt.Fprintln(os.Stderr, "Parameter 'port' is empty.")
-		flag.CommandLine.Usage()
-		os.Exit(102)
 	}
 	if *paramUserPtr == "" {
 		fmt.Fprintln(os.Stderr, "Parameter 'user' is empty.")
@@ -88,11 +89,6 @@ func (config *Config) ParseCommandLine() {
 			flag.CommandLine.Usage()
 			os.Exit(104)
 		}
-	}
-	if *paramNamePtr == "" {
-		fmt.Fprintln(os.Stderr, "Parameter database 'dbname' is empty.")
-		flag.CommandLine.Usage()
-		os.Exit(105)
 	}
 	if *paramTimeout <= *paramTimeperiod {
 		fmt.Fprintln(os.Stderr, "Parameter timeperiod is bigger or equal to timeout. The timeout configuration must be bigger than the timeperiod.")
@@ -116,9 +112,11 @@ func main() {
 	config := &Config{}
 	config.ParseCommandLine()
 
+	dbconfig := &DBConnection{}
+
 	// Build connection string
 	connString := fmt.Sprintf("host=%s;user id=%s;password=%s;port=%d;database=%s;",
-		config.host, config.user, config.password, config.port, config.dbname)
+		dbconfig.host, config.user, config.password, dbconfig.port, dbconfig.name)
 
 	runTime := 0
 	available := false
@@ -151,15 +149,71 @@ func main() {
 			}
 		}
 
-		log.Printf("Wait %d seconds for Database '%s'. Will give up in %d seconds.", runTime, config.dbname, (config.timeout - runTime))
+		log.Printf("Wait %d seconds for Database '%s'. Will give up in %d seconds.", runTime, dbconfig.name, (config.timeout - runTime))
 
 		runTime += config.timeperiod
 		time.Sleep(time.Duration(rand.Int31n(int32(config.timeperiod))) * time.Second)
 	}
 
 	log.Fatalf("No database '%s' found in %d seconds. Please check your configuration [host: %s, database: %s, port: %d, user: %s]",
-		config.dbname, runTime, config.host, config.dbname, config.port, config.user)
+		dbconfig.name, runTime, dbconfig.host, dbconfig.name, dbconfig.port, config.user)
 	os.Exit(10)
+}
+
+func (dbconn *DBConnection) SetDBParamsFromJDBC(jdbcurl string) error {
+	if !strings.HasPrefix(jdbcurl, "jdbc:") {
+		return errors.Errorf("JDBC url parameter is not correct. It does not start with 'jdbc:' (%s)", jdbcurl)
+	}
+	urlParts := strings.Split(jdbcurl, ":")
+	// check for oracle
+	// jdbc:oracle:thin:@hostname:1521:sid
+	if urlParts[1] == "oracle" {
+		dbconn.dbtype = "oracle"
+		if len(urlParts) > 3 {
+			tempHostname := urlParts[3]
+
+			if strings.HasPrefix(tempHostname, "@") {
+				dbconn.host = tempHostname[1:]
+			} else {
+				return errors.Errorf("JDBC url parameter is not correct. There is no hostname. (%s)", jdbcurl)
+			}
+		}
+		if len(urlParts) > 4 {
+			dbconn.port, _ = strconv.Atoi(urlParts[4])
+		}
+
+		if len(urlParts) > 5 {
+			dbconn.name = urlParts[5]
+		}
+	}
+
+	// check for mssql
+	// jdbc:sqlserver://icm-mssql-server:1433;databaseName=icmdb
+	if urlParts[1] == "sqlserver" {
+		dbconn.dbtype = "mssql"
+		if len(urlParts) > 2 {
+			tempHostname := urlParts[2]
+
+			if strings.HasPrefix(tempHostname, "//") {
+				dbconn.host = tempHostname[2:]
+			} else {
+				return errors.Errorf("JDBC url parameter is not correct. There is no hostname. (%s)", jdbcurl)
+			}
+		}
+		if len(urlParts) > 3 {
+			tempPortName := strings.Split(urlParts[3], ";")
+			if len(tempPortName) == 2 {
+				dbconn.port, _ = strconv.Atoi(tempPortName[0])
+
+				tempDBName := strings.Split(tempPortName[1], "=")
+				if len(tempDBName) > 1 {
+					dbconn.name = tempDBName[1]
+				}
+			}
+		}
+	}
+
+	return errors.Errorf("JDBC url parameter is not correct. This is not an oracle or ms sql url (%s)", jdbcurl)
 }
 
 func DBFound(tableCount int) {
