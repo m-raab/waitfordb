@@ -19,12 +19,12 @@ package main
 import (
 	"github.com/Flaque/filet"
 	_ "github.com/Flaque/filet"
+	"os"
 	"testing"
 )
 
-/*
 func TestParseCommandLineDatabase(t *testing.T) {
-	os.Args = []string{"command", "--host=hostname", "--port=1234", "--user=username", "--password=passwd", "--dbname=icmdb"}
+	os.Args = []string{"command", "--jdbcurl=jdbc:oracle:thin:@hostname:1521:sid", "--user=username", "--password=passwd"}
 
 	m := &Config{}
 	m.ParseCommandLine()
@@ -34,9 +34,9 @@ func TestParseCommandLineDatabase(t *testing.T) {
 	}
 }
 
-
+/**
 func TestParseCommandLineLockFile(t *testing.T) {
-	os.Args = []string{"command", "--host=hostname", "--port=1234", "--user=username", "--password=passwd", "--dbname=icmdb", "--lockfile=test"}
+	os.Args = []string{"command", "--jdbcurl=jdbc:oracle:thin:@hostname:1521:sid", "--user=username", "--password=passwd", "--lockfile=test"}
 
 	mc := &Config{}
 	mc.ParseCommandLine()
@@ -45,7 +45,48 @@ func TestParseCommandLineLockFile(t *testing.T) {
 		t.Errorf("Lockfile is not configured. It is %s.", mc.lockfile)
 	}
 }
-*/
+
+
+func TestOracleDB(t *testing.T) {
+
+	dbConnAvailable := -1
+
+	dbcon := &DBConnection{}
+	config := &Config{}
+
+	config.user = "intershop"
+	config.password = "intershop"
+
+	dbcon.SetDBParamsFromJDBC("jdbc:oracle:thin:@localhost:1521:XE")
+	dbcon.SetConnectionString(*config)
+
+	dbConnAvailable = CheckOracleDB(dbcon)
+
+	if dbConnAvailable == 0 {
+		t.Errorf("DBConnection is not available")
+	}
+}
+
+func TestSqlServerDB(t *testing.T) {
+
+	dbConnAvailable := -1
+
+	dbcon := &DBConnection{}
+	config := &Config{}
+
+	config.user = "intershop"
+	config.password = "intershop"
+
+	dbcon.SetDBParamsFromJDBC("jdbc:sqlserver://localhost:1433;databaseName=icmdb")
+	dbcon.SetConnectionString(*config)
+
+	dbConnAvailable = CheckSQLServerDB(dbcon)
+
+	if dbConnAvailable == 0 {
+		t.Errorf("DBConnection is not available")
+	}
+}
+**/
 
 func TestFileExist(t *testing.T) {
 	defer filet.CleanUp(t)

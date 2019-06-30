@@ -1,26 +1,38 @@
-Wait For DB (MS SQL)
+Wait For DB (MS SQL and Oracle)
 =========================
 This tool checks the configured database connection. If the database is not available the command exits with a special exit code.
+
+Prerequisites
+-------------------------
+And Oracle instant client must be installed:
+See https://www.oracle.com/database/technologies/instant-client.html
+
+Download
+- Linux: instantclient-basiclite-linux.x64-12.2.0.1.0.zip
+- MacOS: instantclient-basiclite-macos.x64-12.2.0.1.0.zip
 
 Usage
 -------------------------
 
 It is possible to configure the following parameters:
 
+```
 Usage of waitfordb:
-  -host string
-    	Host name of the server with a MS SQLServer (default "localhost")
-  -name string
-    	Database name
+  -jdbcurl string
+        JDBC url for Oracle or SQLServer
+        eg. jdbc:oracle:thin:@localhost:1521:XE or 
+        or jdbc:sqlserver://localhost:1433;databaseName=icmdb
   -password string
     	Passwort of database user
-  -port int
-    	MSSQLServer is listing on this port (default 1433)
   -user string
     	Database user name
+  -timeout
+    	Timeout for waiting in seconds
+  -timeperiod
+    	Time between checks in seconds
+```
     	
-The program will wait 20 seconds between each check. It tries 10 times to connect the database. 
-This is currently not configurable.
+The program will wait `timeperiod` seconds between each check. 'waitfordb' will wait `timeout` for a connection.
 
 Exit Codes
 -------------------------
@@ -29,8 +41,9 @@ Exit Codes
 | 10 | No database available |
 |  1 | Database without tables found |
 |  0 | Database with tables found |
-| 101 | Host is not configured |
-| 102 | Port is not configured |
+| 101 | JDBC url is not configured |
 | 103 | User is not configured |
 | 104 | Password is not configured |
-| 105 | Database name is not configured |
+| 106 | Parameter timeperiod is bigger or equal to timeout. The timeout configuration must be bigger than the timeperiod. |
+| 107 | Parameter timeout must be bigger than 0. |
+| 108 | Parameter timeperiod must be bigger than 0. |

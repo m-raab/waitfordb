@@ -49,7 +49,10 @@ type DBConnection struct {
 	port int
 	name string
 
-	dbtype string
+	dbtype       string
+	dbConnString string
+	dbDriverName string
+	dbTableCount string
 }
 
 func (config *Config) ParseCommandLine() {
@@ -113,17 +116,12 @@ func main() {
 	config.ParseCommandLine()
 
 	dbconfig := &DBConnection{}
-
-	// Build connection string
-	connString := fmt.Sprintf("host=%s;user id=%s;password=%s;port=%d;database=%s;",
-		dbconfig.host, config.user, config.password, dbconfig.port, dbconfig.name)
+	dbconfig.SetDBParamsFromJDBC(config.jdbcurl)
 
 	runTime := 0
 	available := false
 
 	for runTime < config.timeout {
-		var err error
-
 		// check of lock file
 		if config.lockfile != "" {
 			available = !config.LockFileExists()
@@ -131,21 +129,20 @@ func main() {
 
 		// check database
 		if (config.lockfile != "" && available) || config.lockfile == "" {
-			// Create connection pool
-			db, err = sql.Open("sqlserver", connString)
-			if err != nil {
-				log.Fatalf("Error creating connection pool: %s", err.Error())
+			rv := 0
+
+			if dbconfig.dbtype == "mssql" {
+				rv = CheckSQLServerDB(dbconfig)
+			}
+			if dbconfig.dbtype == "oracle" {
+				rv = CheckOracleDB(dbconfig)
 			}
 
-			ctx := context.Background()
-			err = db.PingContext(ctx)
-
-			if err == nil {
-				fmt.Printf("Connected!\n")
-				count, err := GetTablesCount()
-				if err == nil {
-					DBFound(count)
-				}
+			if rv == 0 {
+				os.Exit(0)
+			}
+			if rv == 1 {
+				os.Exit(1)
 			}
 		}
 
@@ -216,13 +213,80 @@ func (dbconn *DBConnection) SetDBParamsFromJDBC(jdbcurl string) error {
 	return errors.Errorf("JDBC url parameter is not correct. This is not an oracle or ms sql url (%s)", jdbcurl)
 }
 
-func DBFound(tableCount int) {
-	fmt.Printf("Read %d row(s) successfully.\n", tableCount)
-	if tableCount == 0 {
-		fmt.Printf("Database is empty! Initialization is necessary.")
-		os.Exit(1)
+func (dbconn *DBConnection) SetConnectionString(config Config) {
+	if dbconn.dbtype == "mssql" {
+		dbconn.dbConnString = fmt.Sprintf("host=%s;user id=%s;password=%s;port=%d;database=%s;",
+			dbconn.host, config.user, config.password, dbconn.port, dbconn.name)
+		dbconn.dbDriverName = "sqlserver"
+
+		dbconn.dbTableCount = "SELECT Distinct TABLE_NAME FROM INFORMATION_SCHEMA.TABLES;"
 	}
-	os.Exit(0)
+
+	if dbconn.dbtype == "oracle" {
+		dbconn.dbConnString = fmt.Sprintf("%s/%s@//%s:%d/%s",
+			config.user, config.password, dbconn.host, dbconn.port, dbconn.name)
+		dbconn.dbDriverName = "goracle"
+
+		dbconn.dbTableCount = "SELECT TABLE_NAME FROM USER_TABLES"
+	}
+}
+
+func CheckSQLServerDB(dbconfig *DBConnection) int {
+	var err error
+
+	// Create connection pool
+	db, err = sql.Open(dbconfig.dbDriverName, dbconfig.dbConnString)
+	if err != nil {
+		log.Fatalf("Error creating connection pool: %s", err.Error())
+	}
+
+	defer db.Close()
+
+	ctx := context.Background()
+	err = db.PingContext(ctx)
+
+	if err == nil {
+		fmt.Printf("Connected!\n")
+		count, err := GetTablesCount(dbconfig)
+		if err == nil {
+			fmt.Printf("Read %d row(s) successfully.\n", count)
+			if count == 0 {
+				fmt.Printf("Database is empty! Initialization is necessary.\n")
+				return 1
+			}
+			return 0
+		}
+	}
+
+	return 2
+}
+
+func CheckOracleDB(dbconfig *DBConnection) int {
+	var err error
+
+	// Create connection pool
+	db, err = sql.Open(dbconfig.dbDriverName, dbconfig.dbConnString)
+	if err != nil {
+		log.Fatalf("Error creating connection pool: %s", err.Error())
+	}
+	defer db.Close()
+
+	rows, err := db.Query("select sysdate from dual")
+	if err == nil {
+		fmt.Printf("Connected!\n")
+		count, err := GetTablesCount(dbconfig)
+		if err == nil {
+			fmt.Printf("Read %d row(s) successfully.\n", count)
+			if count == 0 {
+				fmt.Printf("Database is empty! Initialization is necessary.\n")
+				return 1
+			}
+			return 0
+		}
+	}
+	defer rows.Close()
+
+	return 2
 }
 
 func (config *Config) LockFileExists() bool {
@@ -234,23 +298,20 @@ func (config *Config) LockFileExists() bool {
 	return true
 }
 
-func GetTablesCount() (int, error) {
-	ctx := context.Background()
-
-	// Check if database is alive.
-	err := db.PingContext(ctx)
+func GetTablesCount(dbconfig *DBConnection) (int, error) {
+	tsql := fmt.Sprintf(dbconfig.dbTableCount)
+	stmt, err := db.Prepare(tsql)
 	if err != nil {
-		return -1, err
+		log.Printf("db.Prepare(%s) failed.\n\t%s\n", tsql, err.Error())
+		return 0, err
 	}
+	defer stmt.Close()
 
-	tsql := fmt.Sprintf("SELECT Distinct TABLE_NAME FROM INFORMATION_SCHEMA.TABLES;")
-
-	// Execute query
-	rows, err := db.QueryContext(ctx, tsql)
+	rows, err := stmt.Query()
 	if err != nil {
-		return -1, err
+		log.Printf("stmt.Query() failed.\n\t%s\n", err.Error())
+		return 0, err
 	}
-
 	defer rows.Close()
 
 	var count = 0
