@@ -46,7 +46,6 @@ func TestParseCommandLineLockFile(t *testing.T) {
 	}
 }
 
-
 func TestOracleDB(t *testing.T) {
 
 	dbConnAvailable := -1
@@ -62,10 +61,11 @@ func TestOracleDB(t *testing.T) {
 
 	dbConnAvailable = CheckOracleDB(dbcon)
 
-	if dbConnAvailable == 0 {
+	if dbConnAvailable == 1 {
 		t.Errorf("DBConnection is not available")
 	}
 }
+
 
 func TestSqlServerDB(t *testing.T) {
 
@@ -86,6 +86,7 @@ func TestSqlServerDB(t *testing.T) {
 		t.Errorf("DBConnection is not available")
 	}
 }
+
 **/
 
 func TestFileExist(t *testing.T) {

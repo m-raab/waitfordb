@@ -117,6 +117,7 @@ func main() {
 
 	dbconfig := &DBConnection{}
 	dbconfig.SetDBParamsFromJDBC(config.jdbcurl)
+	dbconfig.SetConnectionString(*config)
 
 	runTime := 0
 	available := false
@@ -237,7 +238,7 @@ func CheckSQLServerDB(dbconfig *DBConnection) int {
 	// Create connection pool
 	db, err = sql.Open(dbconfig.dbDriverName, dbconfig.dbConnString)
 	if err != nil {
-		log.Fatalf("Error creating connection pool: %s", err.Error())
+		log.Fatalf("Error creating connection pool for %s with %s: %s", dbconfig.dbtype, dbconfig.host, err.Error())
 	}
 
 	defer db.Close()
@@ -267,7 +268,7 @@ func CheckOracleDB(dbconfig *DBConnection) int {
 	// Create connection pool
 	db, err = sql.Open(dbconfig.dbDriverName, dbconfig.dbConnString)
 	if err != nil {
-		log.Fatalf("Error creating connection pool: %s", err.Error())
+		log.Fatalf("Error creating connection pool for %s with %s: %s", dbconfig.dbtype, dbconfig.host, err.Error())
 	}
 	defer db.Close()
 
