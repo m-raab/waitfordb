@@ -3,7 +3,8 @@
 package=waitfordb.go
 package_name=waitfordb
 
-platforms=("linux/amd64" "darwin/amd64")
+# platforms=("linux/amd64" "darwin/amd64")
+platforms=("linux/amd64")
 
 for platform in "${platforms[@]}"
 do
@@ -14,7 +15,7 @@ do
 
     env CGO_ENABLED=1 GOOS=${GOOS} GOARCH=${GOARCH} go build -a -installsuffix nocgo -o ${output_name} ${package}
     if [ $? -ne 0 ]; then
-        echo 'An error has occurred during GO compilation! Aborting the script execution...'
+        echo "An error has occurred during GO compilation of $platform ! Aborting the script execution..."
         exit 1
     fi
     mkdir -p dist && tar -zcvf dist/${package_name}.${GOOS}.${GOARCH}.tar.gz -C bin/${GOOS}-${GOARCH} .
