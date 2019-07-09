@@ -264,6 +264,7 @@ func CheckSQLServerDB(dbconfig *DBConnection) int {
 
 func CheckOracleDB(dbconfig *DBConnection) int {
 	var err error
+	rv := 2
 
 	// Create connection pool
 	db, err = sql.Open(dbconfig.dbDriverName, dbconfig.dbConnString)
@@ -273,21 +274,25 @@ func CheckOracleDB(dbconfig *DBConnection) int {
 	defer db.Close()
 
 	rows, err := db.Query("select sysdate from dual")
-	if err == nil {
-		fmt.Printf("Connected!\n")
-		count, err := GetTablesCount(dbconfig)
-		if err == nil {
-			fmt.Printf("Read %d row(s) successfully.\n", count)
-			if count == 0 {
-				fmt.Printf("Database is empty! Initialization is necessary.\n")
-				return 1
-			}
-			return 0
-		}
+	if err != nil {
+		fmt.Printf("Database on %s is not available. \n", dbconfig.host)
+		return rv
 	}
 	defer rows.Close()
 
-	return 2
+	fmt.Printf("Connected!\n")
+	count, err := GetTablesCount(dbconfig)
+	if err == nil {
+		fmt.Printf("Read %d row(s) successfully.\n", count)
+		if count == 0 {
+			fmt.Printf("Database is empty! Initialization is necessary.\n")
+			rv = 1
+		}
+		rv = 0
+	}
+	defer rows.Close()
+
+	return rv
 }
 
 func (config *Config) LockFileExists() bool {
