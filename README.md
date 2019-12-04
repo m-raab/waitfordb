@@ -26,13 +26,15 @@ Usage of waitfordb:
     	Passwort of database user
   -user string
     	Database user name
-  -timeout
+  -lockfile filepath
+        Creates a lock file
+  -timeout int
     	Timeout for waiting in seconds
-  -timeperiod
+  -timeperiod int
     	Time between checks in seconds
 ```
     	
-The program will wait `timeperiod` seconds between each check. 'waitfordb' will wait `timeout` for a connection.
+The program will wait `timeperiod` seconds between each check. 'waitfordb' will finish with an exit code after the `timeout`, if no connection is available.
 
 Exit Codes
 -------------------------

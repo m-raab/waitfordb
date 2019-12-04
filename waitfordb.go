@@ -216,8 +216,7 @@ func (dbconn *DBConnection) SetDBParamsFromJDBC(jdbcurl string) error {
 
 func (dbconn *DBConnection) SetConnectionString(config Config) {
 	if dbconn.dbtype == "mssql" {
-		dbconn.dbConnString = fmt.Sprintf("host=%s;user id=%s;password=%s;port=%d;database=%s;",
-			dbconn.host, config.user, config.password, dbconn.port, dbconn.name)
+		dbconn.dbConnString = fmt.Sprintf("sqlserver://%s:%s@%s:%d?database=%s", config.user, config.password, dbconn.host, dbconn.port, dbconn.name)
 		dbconn.dbDriverName = "sqlserver"
 
 		dbconn.dbTableCount = "SELECT Distinct TABLE_NAME FROM INFORMATION_SCHEMA.TABLES;"
@@ -237,6 +236,7 @@ func CheckSQLServerDB(dbconfig *DBConnection) int {
 
 	// Create connection pool
 	db, err = sql.Open(dbconfig.dbDriverName, dbconfig.dbConnString)
+
 	if err != nil {
 		log.Fatalf("Error creating connection pool for %s with %s: %s", dbconfig.dbtype, dbconfig.host, err.Error())
 	}
@@ -257,6 +257,8 @@ func CheckSQLServerDB(dbconfig *DBConnection) int {
 			}
 			return 0
 		}
+	} else {
+		log.Fatalf("Error creating connection for %s with %s: %s", dbconfig.dbtype, dbconfig.host, err.Error())
 	}
 
 	return 2

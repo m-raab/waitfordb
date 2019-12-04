@@ -2,14 +2,6 @@
 
 
 [[projects]]
-  digest = "1:3d3a509c5ba327e8573bb57f9da8430c63a46a06886eb1d2ffc8af4e76f31c72"
-  name = "cloud.google.com/go"
-  packages = ["civil"]
-  pruneopts = "UT"
-  revision = "8c41231e01b2085512d98153bcffb847ff9b4b9f"
-  version = "v0.38.0"
-
-[[projects]]
   branch = "master"
   digest = "1:2a25619134eaaa4801f9d97aa3c834b801b381a1b0f639bc1b3ffaee87eec0a1"
   name = "github.com/Flaque/filet"
@@ -19,14 +11,24 @@
 
 [[projects]]
   branch = "master"
-  digest = "1:c9dd44a96bdb9689436c2a1adbbcaba649ff4d51711e1aeab408f4e177dce8a5"
+  digest = "1:695789d752ad87a7f4d2b172fcea25835ba97e7385c4095e3896acb8c822fd38"
   name = "github.com/denisenkom/go-mssqldb"
   packages = [
     ".",
     "internal/cp",
+    "internal/decimal",
+    "internal/querytext",
   ]
   pruneopts = "UT"
-  revision = "731ef375ac027e24d275c5432221dbec5007a647"
+  revision = "1d7a30a10f73a69b1adb731b0ab12be3da43a833"
+
+[[projects]]
+  branch = "master"
+  digest = "1:914bae0d7af57d7f9c2c8eff864071e57c3effebd78eeef26eff4afb0372ed2f"
+  name = "github.com/golang-sql/civil"
+  packages = ["."]
+  pruneopts = "UT"
+  revision = "cb61b32ac6fe84d34b81730175f91965e43d0f90"
 
 [[projects]]
   digest = "1:cf31692c14422fa27c83a05292eb5cbe0fb2775972e8f1f8446a71549bd8980b"
