@@ -125,11 +125,11 @@ func main() {
 	for runTime < config.timeout {
 		// check of lock file
 		if config.lockfile != "" {
-			available = !config.LockFileExists()
+			available = config.LockFileExists()
 		}
 
 		// check database
-		if (config.lockfile != "" && available) || config.lockfile == "" {
+		if (config.lockfile != "" && !available) || config.lockfile == "" {
 			rv := 0
 
 			if dbconfig.dbtype == "mssql" {
@@ -145,9 +145,10 @@ func main() {
 			if rv == 1 {
 				os.Exit(1)
 			}
+			log.Printf("Wait %d seconds for Database '%s'. Will give up in %d seconds.", runTime, dbconfig.name, (config.timeout - runTime))
+		} else {
+			log.Printf("Wait %d seconds for Database '%s' - Lockfile is available. Will give up in %d seconds.", runTime, dbconfig.name, (config.timeout - runTime))
 		}
-
-		log.Printf("Wait %d seconds for Database '%s'. Will give up in %d seconds.", runTime, dbconfig.name, (config.timeout - runTime))
 
 		runTime += config.timeperiod
 		time.Sleep(time.Duration(rand.Int31n(int32(config.timeperiod))) * time.Second)

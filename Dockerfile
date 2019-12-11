@@ -20,5 +20,5 @@ RUN CGO_ENABLED=1 GOOS=linux go build -a -o /waitfordb .
 
 ENV LD_LIBRARY_PATH=/opt/oracle/instantclient_12_2:/lib:/lib64
 
-RUN /waitfordb --jdbcurl=jdbc:oracle:thin:@jmraabmac.dhcp.j.ad.intershop.net:1521:XE --user=intershop --password=intershop && \
+RUN /waitfordb --jdbcurl=jdbc:oracle:thin:@jmraabmac.dhcp.j.ad.intershop.net:1521:XE --user=intershop --password=intershop --lockfile=/intershop/sites/.initSitesLock && \
     exit 0
