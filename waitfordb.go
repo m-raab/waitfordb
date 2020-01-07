@@ -49,6 +49,7 @@ type DBConnection struct {
 	port int
 	name string
 
+	issid        bool
 	dbtype       string
 	dbConnString string
 	dbDriverName string
@@ -165,16 +166,21 @@ func (dbconn *DBConnection) SetDBParamsFromJDBC(jdbcurl string) error {
 	}
 	urlParts := strings.Split(jdbcurl, ":")
 	// check for oracle
+	// jdbc:oracle:thin:@//hostname:1521:service_name
 	// jdbc:oracle:thin:@hostname:1521:sid
 	if urlParts[1] == "oracle" {
 		dbconn.dbtype = "oracle"
 		if len(urlParts) > 3 {
 			tempHostname := urlParts[3]
 
-			if strings.HasPrefix(tempHostname, "@") {
+			if strings.HasPrefix(tempHostname, "@//") {
+				dbconn.host = tempHostname[3:]
+				dbconn.issid = true
+			} else if strings.HasPrefix(tempHostname, "@") {
 				dbconn.host = tempHostname[1:]
+				dbconn.issid = false
 			} else {
-				return errors.Errorf("JDBC url parameter is not correct. There is no hostname. (%s)", jdbcurl)
+				return errors.Errorf("JDBC url parameter is not correct. There is no hostname. Url shoudld be (jdbc:oracle:thin:@//hostname:1521:service_name) but it is (%s)", jdbcurl)
 			}
 		}
 		if len(urlParts) > 4 {
@@ -224,6 +230,13 @@ func (dbconn *DBConnection) SetConnectionString(config Config) {
 	}
 
 	if dbconn.dbtype == "oracle" {
+		if dbconn.issid {
+			dbconn.dbConnString = fmt.Sprintf("%s/%s@%s:%d/%s",
+				config.user, config.password, dbconn.host, dbconn.port, dbconn.name)
+		} else {
+			dbconn.dbConnString = fmt.Sprintf("%s/%s@//%s:%d/%s",
+				config.user, config.password, dbconn.host, dbconn.port, dbconn.name)
+		}
 		dbconn.dbConnString = fmt.Sprintf("%s/%s@//%s:%d/%s",
 			config.user, config.password, dbconn.host, dbconn.port, dbconn.name)
 		dbconn.dbDriverName = "goracle"
