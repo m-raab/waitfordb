@@ -28,3 +28,4 @@ Thumbs.db
 /dist
 /vendor
 docker-compose.yml
+instantclient-basiclite-linux.*
