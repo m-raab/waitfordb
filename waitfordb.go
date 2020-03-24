@@ -76,6 +76,11 @@ func (config *Config) ParseCommandLine() {
 	config.timeout = *paramTimeout
 	config.timeperiod = *paramTimeperiod
 
+	if *paramJdbcUrl == "" && *paramUserPtr == "" && *paramPasswordPtr == "" {
+		fmt.Println("No DB parameter specified. Nothing will be done.")
+		os.Exit(0)
+	}
+
 	if *paramJdbcUrl == "" {
 		fmt.Fprintln(os.Stderr, "Parameter 'jdbcurl' is empty.")
 		flag.CommandLine.Usage()
