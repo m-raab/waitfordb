@@ -171,7 +171,7 @@ func (dbconn *DBConnection) SetDBParamsFromJDBC(jdbcurl string) error {
 	}
 	urlParts := strings.Split(jdbcurl, ":")
 	// check for oracle
-	// jdbc:oracle:thin:@//hostname:1521:service_name
+	// jdbc:oracle:thin:@//hostname:1521/service_name
 	// jdbc:oracle:thin:@hostname:1521:sid
 	if urlParts[1] == "oracle" {
 		dbconn.dbtype = "oracle"
@@ -180,20 +180,27 @@ func (dbconn *DBConnection) SetDBParamsFromJDBC(jdbcurl string) error {
 
 			if strings.HasPrefix(tempHostname, "@//") {
 				dbconn.host = tempHostname[3:]
-				dbconn.issid = true
+				dbconn.issid = false
 			} else if strings.HasPrefix(tempHostname, "@") {
 				dbconn.host = tempHostname[1:]
-				dbconn.issid = false
+				dbconn.issid = true
 			} else {
 				return errors.Errorf("JDBC url parameter is not correct. There is no hostname. Url shoudld be (jdbc:oracle:thin:@//hostname:1521:service_name) but it is (%s)", jdbcurl)
 			}
 		}
 		if len(urlParts) > 4 {
-			dbconn.port, _ = strconv.Atoi(urlParts[4])
-		}
-
-		if len(urlParts) > 5 {
-			dbconn.name = urlParts[5]
+			if dbconn.issid == false {
+				portsStr := strings.Split(urlParts[4], "/")
+				if len(portsStr) > 1 {
+					dbconn.port, _ = strconv.Atoi(portsStr[0])
+					dbconn.name = portsStr[1]
+				}
+			} else {
+				dbconn.port, _ = strconv.Atoi(urlParts[4])
+				if len(urlParts) > 5 {
+					dbconn.name = urlParts[5]
+				}
+			}
 		}
 	}
 
